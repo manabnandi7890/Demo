@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel Data Uploader</title>
+    <style>
+        :root {
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --bg: #f9fafb;
+            --card-bg: #ffffff;
+            --text: #111827;
+            --text-muted: #6b7280;
+            --border: #e5e7eb;
+            --success: #10b981;
+            --error: #ef4444;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            padding: 2rem;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            padding: 2.5rem;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.875rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+
+        p {
+            color: var(--text-muted);
+            margin-bottom: 2rem;
+        }
+
+        .upload-area {
+            border: 2px dashed var(--border);
+            border-radius: 0.75rem;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary);
+            background-color: rgba(79, 70, 229, 0.05);
+        }
+
+        .upload-area.dragging {
+            border-color: var(--primary);
+            background-color: rgba(79, 70, 229, 0.1);
+        }
+
+        .upload-icon {
+            font-size: 3rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        #file-input {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .file-name {
+            font-weight: 500;
+            color: var(--text);
+            margin-top: 0.5rem;
+            display: none;
+        }
+
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            width: 100%;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn:disabled {
+            background-color: var(--text-muted);
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+
+        .status-message {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            display: none;
+        }
+
+        .status-success {
+            display: block;
+            background-color: #ecfdf5;
+            color: var(--success);
+            border: 1px solid #a7f3d0;
+        }
+
+        .status-error {
+            display: block;
+            background-color: #fef2f2;
+            color: var(--error);
+            border: 1px solid #fecaca;
+        }
+
+        .spinner {
+            width: 1.25rem;
+            height: 1.25rem;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 0.5rem;
+            display: none;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>Upload Excel</h1>
+            <p>Select an Excel file (.xlsx) with columns: Id, Name, Email, Phone, City</p>
+
+            <form id="upload-form">
+                <div class="upload-area" id="drop-area">
+                    <div class="upload-icon">📄</div>
+                    <div id="upload-text">Drag & drop or click to browse</div>
+                    <div class="file-name" id="file-name-display"></div>
+                    <input type="file" id="file-input" accept=".xlsx, .xls" required>
+                </div>
+
+                <button type="submit" class="btn" id="upload-btn">
+                    <div class="spinner" id="spinner"></div>
+                    <span>Upload to Database</span>
+                </button>
+            </form>
+
+            <div id="status" class="status-message"></div>
+
+            <hr style="margin: 2rem 0; border: 0; border-top: 1px solid var(--border);">
+
+            <div class="sms-section">
+                <h2>Send SMS</h2>
+                <p>Enter the range of Excel IDs to send SMS</p>
+                <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+                    <div style="flex: 1; text-align: left;">
+                        <label
+                            style="display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.5rem;">Start
+                            Excel ID</label>
+                        <input type="text" id="start-id" placeholder="e.g. 1"
+                            style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 0.5rem; font-family: inherit;">
+                    </div>
+                    <div style="flex: 1; text-align: left;">
+                        <label style="display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.5rem;">End
+                            Excel ID</label>
+                        <input type="text" id="end-id" placeholder="e.g. 10"
+                            style="width: 100%; padding: 0.75rem; border: 1px solid var(--border); border-radius: 0.5rem; font-family: inherit;">
+                    </div>
+                </div>
+                <div style="display: flex; gap: 1rem;">
+                    <button type="button" class="btn" id="send-sms-btn"
+                        style="background-color: var(--success); flex: 1;">
+                        <div class="spinner" id="sms-spinner"></div>
+                        <span>Send SMS</span>
+                    </button>
+                    <button type="button" class="btn" id="download-logs-btn"
+                        style="background-color: var(--primary); flex: 1; display: none;">
+                        <span>Download Logs</span>
+                    </button>
+                </div>
+                <div id="sms-status" class="status-message"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('upload-form');
+        const fileInput = document.getElementById('file-input');
+        const fileNameDisplay = document.getElementById('file-name-display');
+        const uploadText = document.getElementById('upload-text');
+        const dropArea = document.getElementById('drop-area');
+        const statusDiv = document.getElementById('status');
+        const uploadBtn = document.getElementById('upload-btn');
+        const spinner = document.getElementById('spinner');
+
+        fileInput.addEventListener('change', (e) => {
+            if (fileInput.files.length > 0) {
+                const fileName = fileInput.files[0].name;
+                fileNameDisplay.textContent = fileName;
+                fileNameDisplay.style.display = 'block';
+                uploadText.style.display = 'none';
+            }
+        });
+
+        // Drag and drop handlers
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, () => dropArea.classList.add('dragging'), false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, () => dropArea.classList.remove('dragging'), false);
+        });
+
+        dropArea.addEventListener('drop', handleDrop, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            fileInput.files = files;
+
+            if (files.length > 0) {
+                fileNameDisplay.textContent = files[0].name;
+                fileNameDisplay.style.display = 'block';
+                uploadText.style.display = 'none';
+            }
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // UI State: Loading
+            uploadBtn.disabled = true;
+            spinner.style.display = 'block';
+            statusDiv.className = 'status-message';
+            statusDiv.style.display = 'none';
+
+            // Resolve API URL: if opened as file, point to localhost:8080
+            const apiUrl = window.location.protocol === 'file:'
+                ? 'http://localhost:8080/api/excel/upload'
+                : '/api/excel/upload';
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    statusDiv.textContent = result.message;
+                    statusDiv.classList.add('status-success');
+                    form.reset();
+                    fileNameDisplay.style.display = 'none';
+                    uploadText.style.display = 'block';
+                } else {
+                    statusDiv.textContent = result.message || 'Error occurred';
+                    statusDiv.classList.add('status-error');
+                }
+            } catch (error) {
+                if (window.location.protocol === 'file:') {
+                    statusDiv.innerHTML = '<strong>Security Error:</strong> Browsers block requests from local files (<code>file://</code>) to servers for security. Please open <strong><a href="http://localhost:8080">http://localhost:8080</a></strong> instead.';
+                } else {
+                    statusDiv.textContent = 'Network error or server unavailable.';
+                }
+                statusDiv.classList.add('status-error');
+            } finally {
+                uploadBtn.disabled = false;
+                spinner.style.display = 'none';
+                statusDiv.style.display = 'block';
+            }
+        });
+
+        // SMS Sending Logic
+        const sendSmsBtn = document.getElementById('send-sms-btn');
+        const startIdInput = document.getElementById('start-id');
+        const endIdInput = document.getElementById('end-id');
+        const smsStatusDiv = document.getElementById('sms-status');
+        const smsSpinner = document.getElementById('sms-spinner');
+
+        sendSmsBtn.addEventListener('click', async () => {
+            const startId = startIdInput.value.trim();
+            const endId = endIdInput.value.trim();
+
+            if (!startId || !endId) {
+                smsStatusDiv.textContent = 'Please enter both Start and End IDs.';
+                smsStatusDiv.className = 'status-message status-error';
+                smsStatusDiv.style.display = 'block';
+                return;
+            }
+
+            // UI State: Loading
+            sendSmsBtn.disabled = true;
+            smsSpinner.style.display = 'block';
+            smsStatusDiv.className = 'status-message';
+            smsStatusDiv.style.display = 'none';
+
+            const smsApiUrl = window.location.protocol === 'file:'
+                ? 'http://localhost:8080/api/excel/send-sms'
+                : '/api/excel/send-sms';
+
+            try {
+                const response = await fetch(smsApiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ startId, endId })
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    smsStatusDiv.textContent = result.message;
+                    smsStatusDiv.classList.add('status-success');
+                    // Show download button
+                    document.getElementById('download-logs-btn').style.display = 'block';
+                } else {
+                    smsStatusDiv.textContent = result.message || 'Error occurred';
+                    smsStatusDiv.classList.add('status-error');
+                }
+            } catch (error) {
+                smsStatusDiv.textContent = 'Network error or server unavailable.';
+                smsStatusDiv.classList.add('status-error');
+            } finally {
+                sendSmsBtn.disabled = false;
+                smsSpinner.style.display = 'none';
+                smsStatusDiv.style.display = 'block';
+            }
+        });
+
+        // Download Logs Logic
+        const downloadLogsBtn = document.getElementById('download-logs-btn');
+        downloadLogsBtn.addEventListener('click', () => {
+            const downloadUrl = window.location.protocol === 'file:'
+                ? 'http://localhost:8080/api/excel/download-logs'
+                : '/api/excel/download-logs';
+
+            window.open(downloadUrl, '_blank');
+        });
+    </script>
+</body>
+
+</html>
